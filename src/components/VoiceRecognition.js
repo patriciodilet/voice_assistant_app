@@ -1,5 +1,7 @@
 import React, { useState, useEffect, useRef } from "react";
 import axios from "axios";
+import { Container, Paper, Typography, AppBar, Toolbar, Fab } from "@mui/material";
+import { Mic, MicOff } from "@mui/icons-material";
 
 const VoiceRecognition = () => {
   const [transcript, setTranscript] = useState("");
@@ -7,6 +9,7 @@ const VoiceRecognition = () => {
   const [isRecognitionActive, setIsRecognitionActive] = useState(false);
   const [chat, setChat] = useState([]);
   const recognitionRef = useRef(null);
+  const chatEndRef = useRef(null);
 
   const SpeechRecognition =
     window.SpeechRecognition || window.webkitSpeechRecognition;
@@ -30,9 +33,7 @@ const VoiceRecognition = () => {
         try {
           const result = await axios.post(
             "http://localhost:5000/api/generate-response",
-            {
-              transcript: transcriptText,
-            }
+            { transcript: transcriptText }
           );
           setResponse(result.data.response);
           setChat((prevChat) => [
@@ -69,7 +70,6 @@ const VoiceRecognition = () => {
     const handleKeyDown = (event) => {
       if (event.key === " " && !isRecognitionActive) {
         event.preventDefault();
-        // Iniciar reconocimiento con tecla Espacio
         recognitionRef.current.start();
         setIsRecognitionActive(true);
       }
@@ -78,7 +78,6 @@ const VoiceRecognition = () => {
     const handleKeyUp = (event) => {
       if (event.key === " " && isRecognitionActive) {
         event.preventDefault();
-        // Detener reconocimiento al soltar tecla Espacio
         recognitionRef.current.stop();
         setIsRecognitionActive(false);
       }
@@ -107,29 +106,77 @@ const VoiceRecognition = () => {
     }
   };
 
+  useEffect(() => {
+    if (chatEndRef.current) {
+      chatEndRef.current.scrollIntoView({ behavior: "smooth" });
+    }
+  }, [chat]);
+
   return (
-    <div
-      onMouseDown={handleMouseDown}
-      onMouseUp={handleMouseUp}
-      style={{ height: "100vh" }}
-    >
-      <h1>Asistente de Voz</h1>
-      <div className="chat-container">
-        {chat.map((message, index) => (
-          <div
-            key={index}
-            className={
-              message.role === "user" ? "user-message" : "assistant-message"
-            }
-          >
-            <strong>
-              {message.role === "user" ? "Usuario:" : "Asistente:"}
-            </strong>{" "}
-            {message.content}
-          </div>
-        ))}
+    <Container maxWidth="sm" style={{ padding: "1rem", marginTop: "1rem" }}>
+      <div
+        onMouseDown={handleMouseDown}
+        onMouseUp={handleMouseUp}
+        style={{ height: "80vh" }}
+      >
+        <AppBar
+          position="static"
+          elevation={3}
+          style={{ backgroundColor: "#1976d2" }}
+        >
+          <Toolbar>
+            <Typography variant="h6" component="div">
+              Asistente de Voz
+            </Typography>
+          </Toolbar>
+        </AppBar>
+
+        <div
+          className="chat-container"
+          style={{
+            backgroundColor: "#f0f4f8",
+            padding: "1rem",
+            borderRadius: "8px",
+            maxHeight: "60vh",
+            overflowY: "auto",
+            marginTop: "1rem",
+          }}
+        >
+          {chat
+            .slice()
+            .reverse()
+            .map((message, index) => (
+              <Paper
+                key={index}
+                elevation={3}
+                style={{
+                  padding: "1rem",
+                  margin: "0.5rem 0",
+                  backgroundColor:
+                    message.role === "user" ? "#f5f5f5" : "#e3f2fd",
+                }}
+              >
+                <Typography variant="subtitle1" color="textSecondary">
+                  {message.role === "user" ? "Usuario:" : "Asistente:"}
+                </Typography>
+                <Typography variant="body1">{message.content}</Typography>
+              </Paper>
+            ))}
+          <div ref={chatEndRef} />
+        </div>
       </div>
-    </div>
+
+      <Fab
+        size="small"
+        color="primary"
+        aria-label="voice-control"
+        onMouseDown={handleMouseDown}
+        onMouseUp={handleMouseUp}
+        style={{ position: "fixed", bottom: "2rem", right: "2rem" }}
+      >
+        {isRecognitionActive ? <Mic /> : <MicOff />}
+      </Fab>
+    </Container>
   );
 };
 
